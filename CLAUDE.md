@@ -36,9 +36,9 @@ tests/        — pytest; Gmail client is mocked, no live network
   MCP tool can't drive. `gmail-mcp-auth add` runs the installed-app loopback
   flow and stores the refresh token.
 - **Client config** comes from a downloaded Google "Desktop app" OAuth client
-  JSON at `~/.gmail-mcp/client_secret.json` (env `GMAIL_MCP_CLIENT_SECRET`).
+  JSON at `~/.secrets/gmail-mcp/client_secret.json` (env `GMAIL_MCP_CLIENT_SECRET`).
   Never hardcode `client_id`/`client_secret`.
-- **Token store**: SQLite at `~/.gmail-mcp/tokens.db` (env `GMAIL_MCP_DB`).
+- **Token store**: SQLite at `~/.secrets/gmail-mcp/tokens.db` (env `GMAIL_MCP_DB`).
   Keyed by email. Holds refresh_token + last access-token blob + scopes.
 - **Refresh**: google-auth's `Request` transport refreshes the access token
   on demand; `build_service` persists the refreshed blob back to the DB.

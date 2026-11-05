@@ -14,6 +14,7 @@ import pytest
 from googleapiclient.errors import HttpError
 
 import gmail_mcp.server as server
+from gmail_mcp import config
 from gmail_mcp.store import TokenStore
 
 
@@ -264,7 +265,10 @@ class FakeService:
 
 @pytest.fixture
 def fake_service(store, monkeypatch):
-    store.upsert("a@example.com", "refresh-token")
+    # Write tests run against a write-authorized account with writes enabled;
+    # the read-only gate itself is covered in the "read-only gate" section.
+    store.upsert("a@example.com", "refresh-token", scopes=" ".join(config.WRITE_SCOPES))
+    monkeypatch.setenv("GMAIL_MCP_ENABLE_WRITE", "1")
     svc = FakeService()
     # Bypass real credential building / network.
     monkeypatch.setattr(server, "_service_for", lambda email: svc)
@@ -594,7 +598,8 @@ def test_create_draft_from_addr_overrides_sender(fake_service):
     assert "From: a@example.com" not in mime
 
 
-def test_create_draft_schema_exposes_from_addr():
+def test_create_draft_schema_exposes_from_addr(monkeypatch):
+    monkeypatch.setenv("GMAIL_MCP_ENABLE_WRITE", "1")
     tools = asyncio.run(server.list_tools())
     schema = next(t.input_schema for t in tools if t.name == "create_draft")
     assert "from_addr" in schema["properties"]
@@ -822,3 +827,38 @@ def test_download_tool_is_registered():
     tools = asyncio.run(server.list_tools())
     names = {t.name for t in tools}
     assert "download_attachments" in names
+
+
+# --- read-only gate (Digitizer fork) -----------------------------------------
+
+def test_write_tools_hidden_by_default(monkeypatch):
+    monkeypatch.delenv("GMAIL_MCP_ENABLE_WRITE", raising=False)
+    names = {t.name for t in asyncio.run(server.list_tools())}
+    assert names.isdisjoint(config.WRITE_TOOLS)
+    assert "search_messages" in names
+
+
+def test_write_tools_listed_when_enabled(monkeypatch):
+    monkeypatch.setenv("GMAIL_MCP_ENABLE_WRITE", "1")
+    names = {t.name for t in asyncio.run(server.list_tools())}
+    assert set(config.WRITE_TOOLS) <= names
+
+
+def test_write_refused_when_not_enabled(store, monkeypatch):
+    monkeypatch.delenv("GMAIL_MCP_ENABLE_WRITE", raising=False)
+    store.upsert("a@example.com", "r", scopes=" ".join(config.WRITE_SCOPES))
+    out = server._dispatch("trash", {"account": "a@example.com", "message_ids": ["m1"]})
+    assert "disabled" in out
+
+
+def test_write_refused_for_read_only_account(store, monkeypatch):
+    monkeypatch.setenv("GMAIL_MCP_ENABLE_WRITE", "1")
+    store.upsert("ro@example.com", "r", scopes=" ".join(config.READ_SCOPES))
+    for tool in config.WRITE_TOOLS:
+        out = server._dispatch(tool, {"account": "ro@example.com"})
+        assert "read-only" in out, tool
+
+
+def test_read_scopes_are_readonly_only():
+    assert config.READ_SCOPES == ["https://www.googleapis.com/auth/gmail.readonly"]
+    assert not any("gmail.send" in s for s in config.WRITE_SCOPES)

@@ -30,7 +30,12 @@ async def serving(tmp_path):
     params = StdioServerParameters(
         command=sys.executable,
         args=["-m", "gmail_mcp.server"],
-        env={**os.environ, "GMAIL_MCP_DB": str(tmp_path / "tokens.db")},
+        env={
+            **os.environ,
+            "GMAIL_MCP_DB": str(tmp_path / "tokens.db"),
+            # The listing checks below cover the write tools too.
+            "GMAIL_MCP_ENABLE_WRITE": "1",
+        },
     )
     async with (
         stdio_client(params) as (read, write),

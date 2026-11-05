@@ -51,12 +51,12 @@ The server is headless, so the login happens in your laptop browser but the
 
 1. **Put the secret in place** (on the server):
    ```bash
-   mkdir -p ~/.gmail-mcp
+   mkdir -p -m 700 ~/.secrets/gmail-mcp
    # copy the downloaded file there, renamed exactly:
-   mv ~/whatever-google-named-it.json ~/.gmail-mcp/client_secret.json
+   mv ~/whatever-google-named-it.json ~/.secrets/gmail-mcp/client_secret.json
    ```
    (From your laptop you can scp it:
-   `scp ~/Downloads/client_secret_*.json you@your-server:~/.gmail-mcp/client_secret.json`)
+   `scp ~/Downloads/client_secret_*.json you@your-server:~/.secrets/gmail-mcp/client_secret.json`)
 
 2. **SSH in with the port forwarded:**
    ```bash

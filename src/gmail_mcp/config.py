@@ -2,10 +2,10 @@
 
 Resolves the on-disk locations the server and auth CLI need:
 
-  * The token database (SQLite) — default ``~/.gmail-mcp/tokens.db``,
+  * The token database (SQLite) — default ``~/.secrets/gmail-mcp/tokens.db``,
     overridable via the ``GMAIL_MCP_DB`` environment variable.
   * The Google OAuth "Desktop app" client-secret JSON — default
-    ``~/.gmail-mcp/client_secret.json``, overridable via the
+    ``~/.secrets/gmail-mcp/client_secret.json``, overridable via the
     ``GMAIL_MCP_CLIENT_SECRET`` environment variable.
   * The attachment download root, default ``~/.gmail-mcp/attachments``,
     overridable via the ``GMAIL_MCP_ATTACHMENT_DIR`` environment variable.
@@ -19,23 +19,44 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# OAuth scopes. Granular — read, compose drafts, modify labels, and manage
-# filters/settings. NOT the full https://mail.google.com/ scope. gmail.send is
-# intentionally NOT requested: this server never sends mail autonomously, it
-# only creates drafts that you send by hand (prompt-injection safety).
+# OAuth scopes. Digitizer fork: read-only by default.
 #
-# gmail.settings.basic backs the filter tools (list/create/delete_filter). It
-# permits filter management but NOT forwarding-address changes (that needs
-# gmail.settings.sharing, which we deliberately do not request) — so a filter
-# created here can label/archive/trash mail but can never forward it off-account.
-SCOPES: list[str] = [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.compose",
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/gmail.settings.basic",
-]
+# An account authorized with `gmail-mcp-auth add` gets READ_SCOPES only, so
+# Google itself refuses every write for it. An account authorized with
+# `gmail-mcp-auth add --write` also gets the write scopes. gmail.send is never
+# requested: this server can draft mail but never send it.
+_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+_COMPOSE = "https://www.googleapis.com/auth/gmail.compose"
+_MODIFY = "https://www.googleapis.com/auth/gmail.modify"
+_SETTINGS = "https://www.googleapis.com/auth/gmail.settings.basic"
+
+READ_SCOPES: list[str] = [_READONLY]
+WRITE_SCOPES: list[str] = [_READONLY, _COMPOSE, _MODIFY, _SETTINGS]
+
+# Fallback for an account row with no stored scopes.
+SCOPES: list[str] = READ_SCOPES
+
+# Write tools and the scope each needs. They are listed and callable only when
+# the server runs with GMAIL_MCP_ENABLE_WRITE=1, and only for an account whose
+# stored scopes include the one named here.
+WRITE_TOOLS: dict[str, str] = {
+    "create_draft": _COMPOSE,
+    "create_label": _MODIFY,
+    "modify_labels": _MODIFY,
+    "trash": _MODIFY,
+    "bulk_action": _MODIFY,
+    "create_filter": _SETTINGS,
+    "delete_filter": _SETTINGS,
+}
+
+
+def write_enabled() -> bool:
+    """True when the server was started with GMAIL_MCP_ENABLE_WRITE=1."""
+    return os.environ.get("GMAIL_MCP_ENABLE_WRITE") == "1"
 
 _DEFAULT_DIR = Path.home() / ".gmail-mcp"
+# Secrets (token DB, OAuth client) default to ~/.secrets, outside the attachment dir.
+_SECRETS_DIR = Path.home() / ".secrets" / "gmail-mcp"
 
 # Per-message body cap, in characters, applied when surfacing parsed message
 # bodies (read_message / read_thread). Long marketing mail and quoted threads
@@ -60,7 +81,7 @@ def db_path() -> Path:
     override = os.environ.get("GMAIL_MCP_DB")
     if override:
         return Path(override).expanduser()
-    return _DEFAULT_DIR / "tokens.db"
+    return _SECRETS_DIR / "tokens.db"
 
 
 def client_secret_path() -> Path:
@@ -72,7 +93,7 @@ def client_secret_path() -> Path:
     override = os.environ.get("GMAIL_MCP_CLIENT_SECRET")
     if override:
         return Path(override).expanduser()
-    return _DEFAULT_DIR / "client_secret.json"
+    return _SECRETS_DIR / "client_secret.json"
 
 
 def max_body_chars() -> int:

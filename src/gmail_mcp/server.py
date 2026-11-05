@@ -183,6 +183,12 @@ _UNTRUSTED_NOTICE = (
 
 
 async def list_tools() -> list[Tool]:
+    if config.write_enabled():
+        return _all_tools()
+    return [t for t in _all_tools() if t.name not in config.WRITE_TOOLS]
+
+
+def _all_tools() -> list[Tool]:
     return [
         Tool(
             name="list_accounts",
@@ -691,7 +697,29 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(type="text", text=f"Unexpected error: {e}")]
 
 
+def _write_refusal(name: str, args: dict) -> str | None:
+    """Why a write tool may not run for this call, or None when it may."""
+    if not config.write_enabled():
+        return (
+            f"{name} is disabled: this server runs read-only "
+            "(GMAIL_MCP_ENABLE_WRITE is not set)."
+        )
+    acct = _require_account(args.get("account", ""))
+    granted = (acct.scopes or "").split()
+    needed = config.WRITE_TOOLS[name]
+    if needed not in granted:
+        return (
+            f"{name} is not allowed for {acct.email}: the account was authorized "
+            "read-only. Re-authorize it with `gmail-mcp-auth add --write` to allow writes."
+        )
+    return None
+
+
 def _dispatch(name: str, args: dict) -> str:
+    if name in config.WRITE_TOOLS:
+        refusal = _write_refusal(name, args)
+        if refusal:
+            return refusal
     match name:
         case "list_accounts":
             return _do_list_accounts()

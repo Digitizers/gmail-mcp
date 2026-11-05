@@ -28,7 +28,7 @@ import subprocess
 import sys
 import time
 
-from gmail_mcp.config import SCOPES, client_secret_path
+from gmail_mcp.config import READ_SCOPES, WRITE_SCOPES, client_secret_path
 from gmail_mcp.store import TokenStore
 
 
@@ -68,7 +68,7 @@ def _free_port(port: int) -> None:
             return
 
 
-def _add() -> int:
+def _add(write: bool = False) -> int:
     """Run the installed-app OAuth flow and store the resulting account."""
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
@@ -83,7 +83,8 @@ def _add() -> int:
         )
         return 1
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
+    scopes = WRITE_SCOPES if write else READ_SCOPES
+    flow = InstalledAppFlow.from_client_secrets_file(str(secret), scopes)
     # Fixed port + no auto-launch: this server is headless. The flow prints an
     # auth URL you open in a browser on your own machine; the redirect comes
     # back to localhost:OAUTH_PORT, so SSH-forward that port (-L 8765:localhost:8765)
@@ -136,9 +137,9 @@ def _add() -> int:
         email=email,
         refresh_token=creds.refresh_token,
         token=json.dumps({"access_token": creds.token}),
-        scopes=" ".join(SCOPES),
+        scopes=" ".join(scopes),
     )
-    print(f"Authorized and stored: {email}")
+    print(f"Authorized and stored: {email} ({'read and write' if write else 'read-only'})")
     print(f"Token store: {store.path}")
     return 0
 
@@ -171,7 +172,14 @@ def main(argv: list[str] | None = None) -> int:
         description="Manage Gmail accounts for the gmail-mcp server.",
     )
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("add", help="authorize a new Gmail account via OAuth")
+    add = sub.add_parser(
+        "add", help="authorize a new Gmail account via OAuth (read-only by default)"
+    )
+    add.add_argument(
+        "--write",
+        action="store_true",
+        help="also grant draft, label, trash and filter scopes (never send)",
+    )
     sub.add_parser("list", help="list stored accounts")
     rm = sub.add_parser("remove", help="remove a stored account")
     rm.add_argument("email", help="email address of the account to remove")
@@ -179,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "add":
-        return _add()
+        return _add(write=args.write)
     if args.command == "list":
         return _list()
     if args.command == "remove":
