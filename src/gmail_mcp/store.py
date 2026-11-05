@@ -20,6 +20,7 @@ Schema::
 from __future__ import annotations
 
 import contextlib
+import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -49,8 +50,11 @@ class TokenStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or db_path()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._init_db()
+        # The DB holds refresh tokens in plain text: owner-only access.
+        os.chmod(self.path.parent, 0o700)
+        os.chmod(self.path, 0o600)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path)

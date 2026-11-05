@@ -79,3 +79,11 @@ def test_touch_skips_read_only_store(tmp_path):
     TokenStore(path)
     path.chmod(0o444)
     TokenStore(path).touch("a@example.com")
+
+
+def test_store_is_owner_only(tmp_path):
+    import stat
+
+    st = TokenStore(path=tmp_path / "sub" / "tokens.db")
+    assert stat.S_IMODE(st.path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(st.path.parent.stat().st_mode) == 0o700

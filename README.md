@@ -1,5 +1,8 @@
 # gmail-mcp
 
+> **Digitizer fork.** Read-only by default. `gmail-mcp-auth add` grants `gmail.readonly` only; `gmail-mcp-auth add --write` also grants the draft, label, trash and filter scopes for that account. Write tools are listed and callable only when the server runs with `GMAIL_MCP_ENABLE_WRITE=1`, and only for a write-authorized account. `gmail.send` is never requested. The token DB and OAuth client default to `~/.secrets/gmail-mcp/` (dir 700, DB 600).
+
+
 <!-- mcp-name: io.github.cunicopia-dev/multi-account-gmail-mcp -->
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
