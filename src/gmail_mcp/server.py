@@ -700,7 +700,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 def _write_refusal(name: str, args: dict) -> str | None:
     """Why a write tool may not run for this call, or None when it may."""
     if not config.write_enabled():
-        return f"{name} is disabled: this server runs read-only (GMAIL_MCP_ENABLE_WRITE is not set)."
+        return (
+            f"{name} is disabled: this server runs read-only "
+            "(GMAIL_MCP_ENABLE_WRITE is not set)."
+        )
     acct = _require_account(args.get("account", ""))
     granted = (acct.scopes or "").split()
     needed = config.WRITE_TOOLS[name]

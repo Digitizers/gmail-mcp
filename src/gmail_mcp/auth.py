@@ -172,7 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         description="Manage Gmail accounts for the gmail-mcp server.",
     )
     sub = parser.add_subparsers(dest="command")
-    add = sub.add_parser("add", help="authorize a new Gmail account via OAuth (read-only by default)")
+    add = sub.add_parser(
+        "add", help="authorize a new Gmail account via OAuth (read-only by default)"
+    )
     add.add_argument(
         "--write",
         action="store_true",
