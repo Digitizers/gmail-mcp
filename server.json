@@ -20,14 +20,14 @@
       "environmentVariables": [
         {
           "name": "GMAIL_MCP_CLIENT_SECRET",
-          "description": "Path to the Google OAuth \"Desktop app\" client-secret JSON. Defaults to ~/.gmail-mcp/client_secret.json.",
+          "description": "Path to the Google OAuth \"Desktop app\" client-secret JSON. Defaults to ~/.secrets/gmail-mcp/client_secret.json.",
           "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
           "name": "GMAIL_MCP_DB",
-          "description": "Path to the SQLite token store holding per-account refresh tokens. Defaults to ~/.gmail-mcp/tokens.db.",
+          "description": "Path to the SQLite token store holding per-account refresh tokens. Defaults to ~/.secrets/gmail-mcp/tokens.db.",
           "isRequired": false,
           "format": "string",
           "isSecret": false

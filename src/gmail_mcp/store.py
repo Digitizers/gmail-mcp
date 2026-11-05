@@ -50,10 +50,14 @@ class TokenStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or db_path()
+        # The DB holds refresh tokens in plain text: owner-only access. A
+        # directory this store creates is made 700; an existing directory
+        # (possibly shared, possibly owned by someone else) is left as it is.
+        created_dir = not self.path.parent.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if created_dir:
+            os.chmod(self.path.parent, 0o700)
         self._init_db()
-        # The DB holds refresh tokens in plain text: owner-only access.
-        os.chmod(self.path.parent, 0o700)
         os.chmod(self.path, 0o600)
 
     def _connect(self) -> sqlite3.Connection:

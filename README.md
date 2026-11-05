@@ -83,7 +83,7 @@ message id — so the agent can chain `read_message(account, id)` or
 `client_secret.json` authorize every account. Adding the tenth inbox is the same
 one-command flow as the first.
 
-**Boring storage.** Tokens live in one SQLite file under `~/.gmail-mcp/`. No
+**Boring storage.** Tokens live in one SQLite file under `~/.secrets/gmail-mcp/`. No
 daemon, no keyring dependency, no cloud. Back it up by copying it; revoke an
 account by deleting a row; inspect it with any SQLite tool.
 
@@ -134,7 +134,7 @@ flowchart TD
         Agent[MCP client / agent]
         CLI[gmail-mcp-auth CLI]
         Server[gmail-mcp stdio server]
-        Store[("SQLite<br/>~/.gmail-mcp/tokens.db")]
+        Store[("SQLite<br/>~/.secrets/gmail-mcp/tokens.db")]
         Secret["client_secret.json<br/>one OAuth client"]
     end
     Google[Google OAuth + Gmail API]
@@ -212,7 +212,7 @@ in `src/gmail_mcp/config.py`.
   once per Gmail account, signing into the account you want to add each time. A
   single `client_secret.json` can authorize any number of accounts.
 - **Each account is a row in SQLite.** Every authorized account is stored in the
-  `accounts` table (`~/.gmail-mcp/tokens.db`, override with `GMAIL_MCP_DB`),
+  `accounts` table (`~/.secrets/gmail-mcp/tokens.db`, override with `GMAIL_MCP_DB`),
   **keyed by email**. The row holds the long-lived refresh token, the most recent
   access-token blob, the granted scopes, and timestamps.
 - **Tool calls route by the `account` param.** Every tool except `list_accounts`
@@ -442,7 +442,7 @@ SSH-forward step — is in **[docs/SETUP.md](docs/SETUP.md)**. The short version
 
 ```bash
 # 1. Drop your downloaded OAuth client here:
-mkdir -p ~/.gmail-mcp && mv ~/Downloads/client_secret_*.json ~/.gmail-mcp/client_secret.json
+mkdir -p -m 700 ~/.secrets/gmail-mcp && mv ~/Downloads/client_secret_*.json ~/.secrets/gmail-mcp/client_secret.json
 
 # 2. Authorize an account (prints a URL to open in a browser; repeat per account).
 #    On a headless server, SSH in with -L 8765:localhost:8765 first.
@@ -460,12 +460,12 @@ Remove an account later with `gmail-mcp-auth remove you@gmail.com`.
 
 ## Configuration
 
-All optional — sane defaults under `~/.gmail-mcp/`.
+All optional — secrets default under `~/.secrets/gmail-mcp/`, attachments under `~/.gmail-mcp/attachments`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `GMAIL_MCP_DB` | `~/.gmail-mcp/tokens.db` | SQLite token store path. |
-| `GMAIL_MCP_CLIENT_SECRET` | `~/.gmail-mcp/client_secret.json` | Downloaded Google OAuth client. |
+| `GMAIL_MCP_DB` | `~/.secrets/gmail-mcp/tokens.db` | SQLite token store path. |
+| `GMAIL_MCP_CLIENT_SECRET` | `~/.secrets/gmail-mcp/client_secret.json` | Downloaded Google OAuth client. |
 | `GMAIL_MCP_OAUTH_PORT` | `8765` | Fixed loopback port for the auth flow (forward this over SSH on a headless box). |
 | `GMAIL_MCP_ATTACHMENT_DIR` | `~/.gmail-mcp/attachments` | Download root for `download_attachments`. Files land in a per-message subdirectory. This is the only location the server writes to. |
 | `GMAIL_MCP_MAX_ATTACHMENT_BYTES` | `26214400` (25 MB) | Per-attachment size ceiling. Gmail's own limit is 25 MB, so this refuses nothing Gmail would deliver. `0` (or negative) means unlimited. |
@@ -497,8 +497,8 @@ explicitly when needed (some clients don't expand `~`):
     "gmail": {
       "command": "/path/to/gmail-mcp/.venv/bin/gmail-mcp",
       "env": {
-        "GMAIL_MCP_DB": "/home/you/.gmail-mcp/tokens.db",
-        "GMAIL_MCP_CLIENT_SECRET": "/home/you/.gmail-mcp/client_secret.json"
+        "GMAIL_MCP_DB": "/home/you/.secrets/gmail-mcp/tokens.db",
+        "GMAIL_MCP_CLIENT_SECRET": "/home/you/.secrets/gmail-mcp/client_secret.json"
       }
     }
   }

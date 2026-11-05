@@ -87,3 +87,14 @@ def test_store_is_owner_only(tmp_path):
     st = TokenStore(path=tmp_path / "sub" / "tokens.db")
     assert stat.S_IMODE(st.path.stat().st_mode) == 0o600
     assert stat.S_IMODE(st.path.parent.stat().st_mode) == 0o700
+
+
+def test_store_leaves_existing_dir_permissions(tmp_path):
+    import stat
+
+    shared = tmp_path / "shared"
+    shared.mkdir(mode=0o755)
+    os.chmod(shared, 0o755)
+    st = TokenStore(path=shared / "tokens.db")
+    assert stat.S_IMODE(shared.stat().st_mode) == 0o755
+    assert stat.S_IMODE(st.path.stat().st_mode) == 0o600
